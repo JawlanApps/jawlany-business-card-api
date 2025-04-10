@@ -97,6 +97,10 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+        'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
     ],
 
     /*
