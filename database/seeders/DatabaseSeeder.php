@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,12 +13,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Create an admin user
         User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test2@example.com',
-            'password' => Hash::make('123456'),
+            'name' => 'Admin User',
+            'email' => 'admin@example.com',
+            'password' => Hash::make('admin123'),
+            'is_admin' => true,  // Set is_admin to true
+        ]);
+
+        // Call the other seeders
+        $this->call([
+            CategorySeeder::class,
+            CardSeeder::class,
+        ]);
+
+        $this->call([
+            DesignSettingsSeeder::class,
         ]);
     }
 }
+

@@ -9,14 +9,13 @@ class CardCategory extends Model
 {
     use HasFactory;
 
-    protected $table = 'card_category';
+    protected $table = 'card_categories';
 
     protected $fillable = ['card_id', 'category_id'];
 
     public $timestamps = false;
 
-    public function card()
-    {
+    public function card(){
         return $this->belongsTo(Card::class);
     }
 

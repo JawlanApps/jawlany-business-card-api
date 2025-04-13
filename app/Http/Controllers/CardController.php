@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Card;
+use App\Models\Category;
 use Illuminate\Http\Request;
 
 class CardController extends Controller
@@ -12,7 +13,7 @@ class CardController extends Controller
      */
     public function index(): \Illuminate\Http\JsonResponse
     {
-        return response()->json(Card::all());
+        return response()->json(Card::with('categories')->get());
     }
 
     /**
@@ -21,31 +22,45 @@ class CardController extends Controller
     public function store(Request $request)
     {
         \DB::beginTransaction();
-        Try {
+        try {
+            // Validate incoming request
             $validated = $request->validate([
                 'name' => 'required|string|max:255',
                 'sub_name' => 'nullable|string|max:255',
-                'whatsapp' => 'nullable|url',
+                'whatsapp' => 'nullable|string',
                 'email' => 'required|email',
                 'phone' => 'required|string|max:20',
                 'website' => 'nullable|url',
                 'address' => 'nullable|string',
-                'social_media' => 'nullable|json', // Validate as JSON string
-                'profile_picture' => 'nullable|string',
-                'cover_picture' => 'nullable|string',
+                'social_media' => 'nullable|json',
+                'profile_picture' => 'nullable|image|max:2048', // Handle image file for profile picture
+                'cover_picture' => 'nullable|image|max:2048',   // Handle image file for cover picture
                 'theme_color' => 'nullable|string|max:7',
                 'background_color' => 'nullable|string|max:7',
+                'category_ids' => 'nullable|array',
             ]);
 
-            // Convert social_media to JSON if present
-            if ($request->has('social_media')) {
-                $validated['social_media'] = json_encode($request->social_media);
+            // Handle image uploads
+            if ($request->hasFile('profile_picture_file')) {
+                $validated['profile_picture'] = $request->file('profile_picture_file')->store('cards', 'public');
+            } elseif ($request->has('profile_picture') && !is_file($request->profile_picture)) {
+                // If URL is provided instead of a file
+                $validated['profile_picture'] = $request->profile_picture;
             }
 
+            if ($request->hasFile('cover_picture_file')) {
+                $validated['cover_picture'] = $request->file('cover_picture_file')->store('cards', 'public');
+            } elseif ($request->has('cover_picture') && !is_file($request->cover_picture)) {
+                // If URL is provided instead of a file
+                $validated['cover_picture'] = $request->cover_picture;
+            }
+
+            // Create the card
             $card = Card::create($validated);
 
-            if ($request->has('categories')) {
-                $card->categories()->sync($request->categories);
+            // Sync categories
+            if (isset($validated['category_ids'])) {
+                $card->categories()->sync($validated['category_ids']);
             }
 
             \DB::commit();
@@ -68,7 +83,7 @@ class CardController extends Controller
      */
     public function show($id)
     {
-        return response()->json(Card::findOrFail($id));
+        return response()->json(Card::with('categories')->findOrFail($id));
     }
 
     /**
@@ -79,20 +94,36 @@ class CardController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'sub_name' => 'sometimes|string|max:255',
-            'whatsapp' => 'sometimes|string|max:255',
+            'whatsapp' => 'nullable|string',  // Accept both string and URL format
             'email' => 'sometimes|email|max:255',
             'phone' => 'sometimes|string|max:20',
             'website' => 'sometimes|url',
             'address' => 'sometimes|string',
-            'social_media' => 'sometimes|json',
-            'profile_picture' => 'nullable|image|max:2048',
-            'cover_picture' => 'nullable|image|max:2048',
-            'theme_color' => 'sometimes|string|max:20',
-            'background_color' => 'sometimes|string|max:20',
+            'social_media' => 'sometimes|json', // Accept json format for social media links
+            'profile_picture' => 'nullable|image|max:2048', // Handle image file for profile picture
+            'cover_picture' => 'nullable|image|max:2048',   // Handle image file for cover picture
+            'theme_color' => 'sometimes|string|max:7',
+            'background_color' => 'sometimes|string|max:7',
             'category_ids' => 'array',
             'category_ids.*' => 'exists:categories,id',
         ]);
 
+        // Handle image uploads
+        if ($request->hasFile('profile_picture_file')) {
+            $validated['profile_picture'] = $request->file('profile_picture_file')->store('cards', 'public');
+        } elseif ($request->has('profile_picture') && !is_file($request->profile_picture)) {
+            // If URL is provided instead of a file
+            $validated['profile_picture'] = $request->profile_picture;
+        }
+
+        if ($request->hasFile('cover_picture_file')) {
+            $validated['cover_picture'] = $request->file('cover_picture_file')->store('cards', 'public');
+        } elseif ($request->has('cover_picture') && !is_file($request->cover_picture)) {
+            // If URL is provided instead of a file
+            $validated['cover_picture'] = $request->cover_picture;
+        }
+
+        // Update the card
         $card->update($validated);
 
         if (isset($validated['category_ids'])) {
@@ -108,7 +139,7 @@ class CardController extends Controller
     public function destroy($id)
     {
         Card::destroy($id);
-        return response()->json(['message' => 'Card'.$id.'deleted successfully']);
+        return response()->json(['message' => "Card $id deleted successfully"]);
     }
 
     public function assignCategories(Request $request, Card $card)
@@ -121,5 +152,28 @@ class CardController extends Controller
         $card->categories()->sync($validated['category_ids']);
 
         return response()->json($card->load('categories'));
+    }
+    public function getCardsByCategory($categoryId)
+    {
+        try {
+            // Use Category model to find the category by ID
+            $category = Category::findOrFail($categoryId);
+
+            if (!$category) {
+                return response()->json(['message' => 'Category not found'], 404);
+            }
+
+            // Fetch the cards associated with the category
+            $cards = $category->cards;
+
+            // Return the cards as a JSON response
+            return response()->json($cards);
+        } catch (\Exception $e) {
+            // If category is not found or any other error occurs, catch it and return a 500 error with the message
+            return response()->json([
+                'message' => 'An error occurred while fetching cards for the category.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }
