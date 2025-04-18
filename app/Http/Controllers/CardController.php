@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Card;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class CardController extends Controller
 {
@@ -40,19 +42,12 @@ class CardController extends Controller
                 'category_ids' => 'nullable|array',
             ]);
 
-            // Handle image uploads
-            if ($request->hasFile('profile_picture_file')) {
-                $validated['profile_picture'] = $request->file('profile_picture_file')->store('cards', 'public');
-            } elseif ($request->has('profile_picture') && !is_file($request->profile_picture)) {
-                // If URL is provided instead of a file
-                $validated['profile_picture'] = $request->profile_picture;
+            if ($request->hasFile('profile_picture')) {
+                $validated['profile_picture'] = $request->file('profile_picture')->store('cards', 'public');
             }
 
-            if ($request->hasFile('cover_picture_file')) {
-                $validated['cover_picture'] = $request->file('cover_picture_file')->store('cards', 'public');
-            } elseif ($request->has('cover_picture') && !is_file($request->cover_picture)) {
-                // If URL is provided instead of a file
-                $validated['cover_picture'] = $request->cover_picture;
+            if ($request->hasFile('cover_picture')) {
+                $validated['cover_picture'] = $request->file('cover_picture')->store('cards', 'public');
             }
 
             // Create the card
@@ -91,39 +86,47 @@ class CardController extends Controller
      */
     public function update(Request $request, Card $card)
     {
-        $validated = $request->validate([
+        $rules = [
             'name' => 'sometimes|string|max:255',
             'sub_name' => 'sometimes|string|max:255',
-            'whatsapp' => 'nullable|string',  // Accept both string and URL format
+            'whatsapp' => 'nullable|string',
             'email' => 'sometimes|email|max:255',
             'phone' => 'sometimes|string|max:20',
             'website' => 'sometimes|url',
             'address' => 'sometimes|string',
-            'social_media' => 'sometimes|json', // Accept json format for social media links
-            'profile_picture' => 'nullable|image|max:2048', // Handle image file for profile picture
-            'cover_picture' => 'nullable|image|max:2048',   // Handle image file for cover picture
+            'social_media' => 'sometimes|json',
             'theme_color' => 'sometimes|string|max:7',
             'background_color' => 'sometimes|string|max:7',
             'category_ids' => 'array',
             'category_ids.*' => 'exists:categories,id',
-        ]);
+        ];
 
-        // Handle image uploads
-        if ($request->hasFile('profile_picture_file')) {
-            $validated['profile_picture'] = $request->file('profile_picture_file')->store('cards', 'public');
-        } elseif ($request->has('profile_picture') && !is_file($request->profile_picture)) {
-            // If URL is provided instead of a file
-            $validated['profile_picture'] = $request->profile_picture;
+        if ($request->hasFile('profile_picture')) {
+            $rules['profile_picture'] = 'image|max:2048';
         }
 
-        if ($request->hasFile('cover_picture_file')) {
-            $validated['cover_picture'] = $request->file('cover_picture_file')->store('cards', 'public');
-        } elseif ($request->has('cover_picture') && !is_file($request->cover_picture)) {
-            // If URL is provided instead of a file
-            $validated['cover_picture'] = $request->cover_picture;
+        if ($request->hasFile('cover_picture')) {
+            $rules['cover_picture'] = 'image|max:2048';
         }
 
-        // Update the card
+        $validated = $request->validate($rules);
+
+        // Replace and delete old profile picture if a new one is uploaded
+        if ($request->hasFile('profile_picture')) {
+            if ($card->profile_picture && \Str::startsWith($card->profile_picture, 'cards/')) {
+                Storage::disk('public')->delete($card->profile_picture);
+            }
+            $validated['profile_picture'] = $request->file('profile_picture')->store('cards', 'public');
+        }
+
+        // Replace and delete old cover picture if a new one is uploaded
+        if ($request->hasFile('cover_picture')) {
+            if ($card->cover_picture && \Str::startsWith($card->cover_picture, 'cards/')) {
+                Storage::disk('public')->delete($card->cover_picture);
+            }
+            $validated['cover_picture'] = $request->file('cover_picture')->store('cards', 'public');
+        }
+
         $card->update($validated);
 
         if (isset($validated['category_ids'])) {
@@ -138,7 +141,20 @@ class CardController extends Controller
      */
     public function destroy($id)
     {
-        Card::destroy($id);
+        $card = Card::findOrFail($id);
+
+        // Delete local profile picture if it's a stored file
+        if ($card->profile_picture && Str::startsWith($card->profile_picture, 'cards/')) {
+            Storage::disk('public')->delete($card->profile_picture);
+        }
+
+        // Delete local cover picture if it's a stored file
+        if ($card->cover_picture && Str::startsWith($card->cover_picture, 'cards/')) {
+            Storage::disk('public')->delete($card->cover_picture);
+        }
+
+        $card->delete();
+
         return response()->json(['message' => "Card $id deleted successfully"]);
     }
 

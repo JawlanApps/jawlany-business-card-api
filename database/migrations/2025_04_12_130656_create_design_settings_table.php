@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('design_settings', function (Blueprint $table) {
             $table->id();
             $table->string('landing_background_image')->nullable();
-            $table->string('landing_title')->nullable();
-            $table->string('landing_subtitle')->nullable();
+            $table->json('landing_title')->nullable();
+            $table->json('landing_subtitle')->nullable();
             $table->string('menu_logo')->nullable();
             $table->string('menu_background_color')->default('#ffffff');
             $table->timestamps();

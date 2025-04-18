@@ -7,9 +7,18 @@ use Illuminate\Http\Request;
 
 class DesignSettingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(DesignSetting::firstOrCreate([])); // Get or create default design settings
+        $locale = $request->get('lang', app()->getLocale());
+        $settings = DesignSetting::firstOrCreate([]);
+
+        return response()->json([
+            'landing_background_image' => $settings->landing_background_image,
+            'landing_title' => $settings->landing_title[$locale] ?? '',
+            'landing_subtitle' => $settings->landing_subtitle[$locale] ?? '',
+            'menu_logo' => $settings->menu_logo,
+            'menu_background_color' => $settings->menu_background_color,
+        ]);
     }
 
     public function update(Request $request)

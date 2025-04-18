@@ -12,11 +12,17 @@ class DesignSettingsSeeder extends Seeder
         // Only insert if table is empty
         if (DesignSetting::count() === 0) {
             DesignSetting::create([
-                'landing_background_image' => '/images/default-bg.png', // make sure this exists or update
-                'landing_title' => 'بطاقة عمل رقميّة',
-                'landing_subtitle' => 'أنشئ بطاقتك الرقميّة بسهولة وشارك معلوماتك المهنية في لحظات، دون الحاجة إلى طباعة أو تصميم معقد',
-                'menu_logo' => '/images/default-logo.png', // update to your actual logo path
-                'menu_background_color' => '#222',
+                'landing_background_image' => '/images/default-bg.png',
+                'landing_title' => [
+                    'ar' => 'بطاقة عمل رقميّة',
+                    'he' => 'כרטיס ביקור דיגיטלי',
+                ],
+                'landing_subtitle' => [
+                    'ar' => 'أنشئ بطاقتك الرقميّة بسهولة وشارك معلوماتك المهنية في لحظات، دون الحاجة إلى طباعة أو تصميم معقد',
+                    'he' => 'צור את כרטיס הביקור הדיגיטלי שלך בקלות ושתף את המידע המקצועי שלך תוך רגעים, ללא צורך בהדפסה או עיצוב מורכב.',
+                ],
+                'menu_logo' => '/images/default-logo.png',
+                'menu_background_color' => '#cd5c5c',
             ]);
         }
     }

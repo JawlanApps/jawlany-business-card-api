@@ -16,5 +16,10 @@ class DesignSetting extends Model
         'menu_logo',
         'menu_background_color',
     ];
+
+    protected $casts = [
+        'landing_title' => 'array',
+        'landing_subtitle' => 'array',
+    ];
 }
 

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\TranslationController;
 
 // Public routes
 Route::get('/cards', [CardController::class, 'index']);
@@ -13,20 +14,11 @@ Route::get('/cards/category/{categoryId}', [CardController::class, 'getCardsByCa
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
 Route::get('/design-settings', [DesignSettingController::class, 'index']);
+Route::get('/translations/{locale}', [TranslationController::class, 'getTranslations']);
 
 // Auth routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
-
-// DB test route (debug only)
-Route::get('/db-test', function () {
-    try {
-        \DB::connection()->getPdo();
-        return 'DB connected!';
-    } catch (\Exception $e) {
-        return 'DB connection failed: ' . $e->getMessage();
-    }
-});
 
 // Protected admin routes
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
